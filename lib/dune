@@ -1,0 +1,53 @@
+(library
+  (name unicorn)
+  (public_name unicorn)
+  (modules unicorn
+           uc_const
+           arm64_const
+           arm64
+           arm_const
+           arm
+           m68k_const
+           m68k
+           mips_const
+           mips
+           sparc_const
+           sparc
+           x86_const
+           x86)
+  (c_names unicorn_stubs
+           uc_const_stubs
+           arm64_const_stubs
+           arm_const_stubs
+           m68k_const_stubs
+           mips_const_stubs
+           sparc_const_stubs
+           x86_const_stubs)
+  (c_flags (-Wall -Wextra))
+  (c_library_flags (-lunicorn)))
+
+(rule
+ (targets uc_const.ml
+          uc_const_stubs.c
+          uc_const_stubs.h
+          arm64_const.ml
+          arm64_const_stubs.c
+          arm64_const_stubs.h
+          arm_const.ml
+          arm_const_stubs.c
+          arm_const_stubs.h
+          m68k_const.ml
+          m68k_const_stubs.c
+          m68k_const_stubs.h
+          mips_const.ml
+          mips_const_stubs.c
+          mips_const_stubs.h
+          sparc_const.ml
+          sparc_const_stubs.c
+          sparc_const_stubs.h
+          x86_const.ml
+          x86_const_stubs.c
+          x86_const_stubs.h
+          unicorn_poly_var_syms.h)
+ (deps    ../support/gen.exe)
+ (action  (run %{deps})))

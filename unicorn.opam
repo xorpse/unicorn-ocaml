@@ -1,0 +1,8 @@
+opam-version: "2.0"
+name: "unicorn"
+version: "0.1.0"
+maintainer: "Sam L. Thomas <st@xv.ax>"
+
+depends: [
+  "dune"          { build }
+]
