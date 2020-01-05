@@ -1,9 +1,25 @@
+open Stdint
+open! Types
+
 module Arm = Arm
-module Arm64 = Arm64
+module Aarch = Aarch
 module M68k = M68k
-module Mips = Mips
-module Sparc = Sparc
+module Mips64 = Mips.M64
+module Mips = Mips.M32
+module Sparc64 = Sparc.M32
+module Sparc = Sparc.M32
 module X86 = X86
+module X86_64 = X86_64
+
+module Arch = Types.Arch
+module Endian = Types.Endian
+module Family = Types.Family
+module Mode = Types.Mode
+
+module type S = Types.S
+
+type handle = Types.handle
+type ('family, 'endian, 'word) engine = ('family, 'endian, 'word) Types.engine
 
 module Const = struct
   module Arch = Uc_const.Arch
@@ -13,99 +29,9 @@ module Const = struct
 end
 
 exception Unicorn_error of Const.Err.t
+let _ = Callback.register_exception "Unicorn_error" (Unicorn_error Const.Err.ok)
 
-type handle
-
-external create_ffi : arch:Const.Arch.t -> mode:int -> handle = "ml_unicorn_create"
 external version    : unit -> int * int = "ml_unicorn_version"
-
-module Arch = struct
-  type no_insn
-
-  type ('a, 'r, 'i) t =
-    | ARM   : ([ `ARM ], Arm.Const.Reg.t, no_insn) t
-    | ARM64 : ([ `ARM64 ], Arm64.Const.Reg.t, no_insn) t
-    | M68K  : ([ `M68K ], M68k.Const.Reg.t, no_insn) t
-    | MIPS  : ([ `MIPS ], Mips.Const.Reg.t, no_insn) t
-    | SPARC : ([ `SPARC ], Sparc.Const.Reg.t, no_insn) t
-    | X86   : ([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) t
-
-  type id = [ `ARM
-            | `ARM64
-            | `M68K
-            | `MIPS
-            | `SPARC
-            | `X86
-            ]
-  type any = id
-end
-
-type ('a, 'r, 'i) engine = T : ('a, 'r, 'i) Arch.t * handle -> ('a, 'r, 'i) engine
-
-let handle = function T (_, h) -> h
-
-module Mode = struct
-  type 'a t =
-    | M_LITTLE_ENDIAN : [< Arch.any ] t
-    | M_ARM           : [< `ARM ] t
-    | M_MODE_16       : [< `X86 ] t
-    | M_MODE_32       : [< `MIPS | `SPARC | `X86 ] t
-    | M_MODE_64       : [< `MIPS | `SPARC | `X86 ] t
-    | M_THUMB         : [< `ARM ] t
-    | M_MCLASS        : [< `ARM ] t
-    | M_V8            : [< `ARM ] t
-    | M_MICRO         : [< `MIPS ] t
-    | M_MIPS3         : [< `MIPS ] t
-    | M_MIPS32R6      : [< `MIPS ] t
-    | M_BIG_ENDIAN    : [< Arch.any] t
-    | M_MIPS32        : [< `MIPS ] t
-    | M_MIPS64        : [< `MIPS ] t
-    | M_SPARC32       : [< `SPARC ] t
-    | M_SPARC64       : [< `SPARC ] t
-    | M_V9            : [< `SPARC ] t
-    | M_PLUS          : 'a t * 'a t -> 'a t
-
-  let little_endian = M_LITTLE_ENDIAN
-  let arm = M_ARM
-  let mode_16 = M_MODE_16
-  let mode_32 = M_MODE_32
-  let mode_64 = M_MODE_64
-  let thumb = M_THUMB
-  let mclass = M_MCLASS
-  let v8 = M_V8
-  let micro = M_MICRO
-  let mips3 = M_MIPS3
-  let mips32r6 = M_MIPS32R6
-  let big_endian = M_BIG_ENDIAN
-  let mips32 = M_MIPS32
-  let mips64 = M_MIPS64
-  let sparc32 = M_SPARC32
-  let sparc64 = M_SPARC64
-  let v9 = M_V9
-  let (&) v v' = M_PLUS (v, v')
-
-  let rec to_int_mode : 'a. 'a t -> int =
-    let aux (type a) (m : a t) : int = match m with
-      | M_LITTLE_ENDIAN -> (Const.Mode.little_endian :> int)
-      | M_ARM -> (Const.Mode.arm :> int)
-      | M_MODE_16 -> (Const.Mode.mode_16 :> int)
-      | M_MODE_32 -> (Const.Mode.mode_32 :> int)
-      | M_MODE_64 -> (Const.Mode.mode_64 :> int)
-      | M_THUMB -> (Const.Mode.thumb :> int)
-      | M_MCLASS -> (Const.Mode.mclass :> int)
-      | M_V8 -> (Const.Mode.v8 :> int)
-      | M_MICRO -> (Const.Mode.micro :> int)
-      | M_MIPS3 -> (Const.Mode.mips3 :> int)
-      | M_MIPS32R6 -> (Const.Mode.mips32r6 :> int)
-      | M_V9 -> (Const.Mode.v9 :> int)
-      | M_BIG_ENDIAN -> (Const.Mode.big_endian :> int)
-      | M_MIPS32 -> (Const.Mode.mips32 :> int)
-      | M_MIPS64 -> (Const.Mode.mips64 :> int)
-      | M_SPARC32 -> (Const.Mode.sparc32 :> int)
-      | M_SPARC64 -> (Const.Mode.sparc64 :> int)
-      | M_PLUS (v, v') -> to_int_mode v land to_int_mode v'
-    in aux
-end
 
 module Memory = struct
   module Permission = struct
@@ -119,6 +45,7 @@ module Memory = struct
 
 end
 
+(*
 module Hook = struct
   module Mem = struct
     module Valid = struct
@@ -155,8 +82,8 @@ module Hook = struct
     | M_HOOK_INTR    : (('a, 'r, 'i) engine -> int32 -> 'v -> 'v) -> ('a, 'r, 'i, 'v) callback
     | M_HOOK_MEM     : (('a, 'r, 'i) engine -> Memory.Access.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) * Mem.Valid.t -> ('a, 'r, 'i, 'v) callback
     | M_HOOK_MEMEV   : (('a, 'r, 'i) engine -> Memory.Access.t -> int64 -> int -> int64 -> 'v -> 'v cont) * Mem.Invalid.t -> ('a, 'r, 'i, 'v) callback
-    | M_HOOK_X86_IN  : (([< `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> 'v -> int32 * 'v) -> ([< `X86 ], X86.Const.Reg.t, X86.Const.Insn.t, 'v) callback
-    | M_HOOK_X86_OUT : (([< `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> int32 -> 'v -> 'v) -> ([< `X86 ], X86.Const.Reg.t, X86.Const.Insn.t, 'v) callback
+    | M_HOOK_X86_IN  : (([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> 'v -> int32 * 'v) -> ([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t, 'v) callback
+    | M_HOOK_X86_OUT : (([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> int32 -> 'v -> 'v) -> ([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t, 'v) callback
 
   let code f = M_HOOK_CODE f
   let intr f = M_HOOK_INTR f
@@ -165,28 +92,29 @@ module Hook = struct
   let in_ f = M_HOOK_X86_IN f
   let out f = M_HOOK_X86_OUT f
 
-  external hook_add_code_ffi : handle -> Const.Hook.t -> (('a, 'r, 'i) engine -> int64 -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_intr_ffi : handle -> Const.Hook.t -> (('a, 'r, 'i) engine -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_mem_ffi : handle -> Mem.Valid.t -> (('a, 'r, 'i) engine -> Memory.Access.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_memev_ffi : handle -> Mem.Invalid.t -> (('a, 'r, 'i) engine -> Memory.Access.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_code_ffi : handle -> Const.Hook.t -> (handle -> int64 -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_intr_ffi : handle -> Const.Hook.t -> (handle -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_mem_ffi : handle -> Mem.Valid.t -> (handle -> Memory.Access.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_memev_ffi : handle -> Mem.Invalid.t -> (handle -> Memory.Access.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
 
-  external hook_add_insn_in_ffi : handle -> Const.Hook.t -> (([< `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> 'v -> int32 * 'v) -> 'v -> 'i -> int64 = "ml_unicorn_hook_add_insn"
-  external hook_add_insn_out_ffi : handle -> Const.Hook.t -> (([< `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> int32 -> 'v -> 'v) -> 'v -> 'i -> int64 = "ml_unicorn_hook_add_insn"
+  external hook_add_insn_in_ffi : handle -> Const.Hook.t -> (handle -> int32 -> int -> 'v -> int32 * 'v) -> 'v -> X86.Const.Insn.t -> int64 = "ml_unicorn_hook_add_insn"
+  external hook_add_insn_out_ffi : handle -> Const.Hook.t -> (handle -> int32 -> int -> int32 -> 'v -> 'v) -> 'v -> X86.Const.Insn.t -> int64 = "ml_unicorn_hook_add_insn"
 
   external hook_del_ffi : handle -> int64 -> unit = "ml_unicorn_hook_del"
 
   type ('a, 'r, 'i) handle = ('a, 'r, 'i) engine * int64
 
-  let add (type a) (type r) (type i) (type v) (engine : (a, r, i) engine) (cb : (a, r, i, v) callback) (init : v) : (a, r, i) handle =
-    let T (_, e) = engine in
+  let add (type a) (type r) (type i) (type v) (e : (a, r, i) engine) (cb : (a, r, i, v) callback) (init : v) : (a, r, i) handle =
+    let T (a, eh) = e in
+    let mk_f f e' = f (T (a, e')) in
     let h = match cb with
-      | M_HOOK_CODE f -> hook_add_code_ffi e Const.Hook.code f init
-      | M_HOOK_INTR f -> hook_add_intr_ffi e Const.Hook.intr f init
-      | M_HOOK_MEM (f, t) -> hook_add_mem_ffi e t f init
-      | M_HOOK_MEMEV (f, t) -> hook_add_memev_ffi e t f init
-      | M_HOOK_X86_IN f -> hook_add_insn_in_ffi e Const.Hook.insn f init X86.Const.Insn.in_
-      | M_HOOK_X86_OUT f -> hook_add_insn_out_ffi e Const.Hook.insn f init X86.Const.Insn.out
-    in (engine, h)
+      | M_HOOK_CODE f -> hook_add_code_ffi eh Const.Hook.code (mk_f f) init
+      | M_HOOK_INTR f -> hook_add_intr_ffi eh Const.Hook.intr (mk_f f) init
+      | M_HOOK_MEM (f, t) -> hook_add_mem_ffi eh t (mk_f f) init
+      | M_HOOK_MEMEV (f, t) -> hook_add_memev_ffi eh t (mk_f f) init
+      | M_HOOK_X86_IN f -> hook_add_insn_in_ffi eh Const.Hook.insn (mk_f f) init X86.Const.Insn.in_
+      | M_HOOK_X86_OUT f -> hook_add_insn_out_ffi eh Const.Hook.insn (mk_f f) init X86.Const.Insn.out
+    in (e, h)
 
   let remove (type a) (type r) (type i) (e : (a, r, i) engine) (eh : (a, r, i) handle) =
     let (_, h) = eh in
@@ -195,13 +123,49 @@ module Hook = struct
 end
 
 let create (type a) (type r) (type i) ?(mode : a Mode.t option) (arch : (a, r, i) Arch.t) : (a, r, i) engine =
-  let arch' = match arch with
-    | Arch.ARM -> Const.Arch.arm
-    | Arch.ARM64 -> Const.Arch.arm64
-    | Arch.M68K -> Const.Arch.m68k
-    | Arch.MIPS -> Const.Arch.mips
-    | Arch.SPARC -> Const.Arch.sparc
-    | Arch.X86 -> Const.Arch.x86
+  let arch', mode' = match arch with
+    | Arch.ARM -> Const.Arch.arm, mode
+    | Arch.AARCH64 -> Const.Arch.arm64, mode
+    | Arch.M68K -> Const.Arch.m68k, mode
+    | Arch.MIPS -> Const.Arch.mips, mode
+    | Arch.SPARC -> Const.Arch.sparc, mode
+    | Arch.X86 -> Const.Arch.x86, mode
+    | Arch.X86_64 -> Const.Arch.x86, match mode with None -> Some Mode.mode_64 | Some v -> Some (Mode.(v & mode_64))
   in
-  let mode' = match mode with None -> 0 | Some v -> Mode.to_int_mode v in
-  T (arch, create_ffi ~arch:arch' ~mode:mode')
+  let mode'' = match mode' with None -> 0 | Some v -> Mode.to_int_mode v in
+  T (arch, create_ffi ~arch:arch' ~mode:mode'')
+
+module Register = struct
+  let write (type a) (type rt) (type rs) (type i) (_e : (a, rt, i) engine) (_r : (rt, rs) reg) (_v : rs) : unit =
+    failwith "unimplemented"
+
+  let read (type a) (type rt) (type rs) (type i) (_e : (a, rt, i) engine) (_r : (rt, rs) reg) : rs =
+    failwith "unimplemented"
+end
+   *)
+
+let create (type a) (type f) (type w) (type e)
+    ?(mode : a mode option)
+    (module M : S with type arch = a
+                   and type family = f
+                   and type endian = e
+                   and type word = w) =
+  M.create ?mode ()
+
+let into_m16 (type f) (type w) (type e)
+    (module M : Into16 with type endian = e
+                        and type family = f
+                        and type word = w) =
+  M.into_m16
+
+let into_m32 (type f) (type w) (type e)
+    (module M : Into32 with type endian = e
+                        and type family = f
+                        and type word = w) =
+  M.into_m32
+
+let into_m64 (type f) (type w) (type e)
+    (module M : Into64 with type endian = e
+                        and type family = f
+                        and type word = w) =
+  M.into_m64

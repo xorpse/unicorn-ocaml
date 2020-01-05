@@ -96,7 +96,7 @@ CAMLprim value ml_unicorn_create(value arch, value mode) {
 
   if ((err = uc_open(Int_val(arch), Int_val(mode), &handle)) != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
-                        ml_uc_err_to_unicorn(err));
+                        Val_int(err));
   }
 
   CAMLreturn(ml_unicorn_alloc_handle(handle));
@@ -254,7 +254,7 @@ CAMLprim value ml_unicorn_hook_add(value engine, value type, value hook, value i
 
   if (err != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
-                        ml_uc_err_to_unicorn(err));
+                        Val_int(err));
   }
 
   CAMLreturn(caml_copy_int64(hh));
@@ -287,7 +287,7 @@ CAMLprim value ml_unicorn_hook_add_insn(value engine, value type, value hook, va
 
   if (err != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
-                        ml_uc_err_to_unicorn(err));
+                        Val_int(err));
   }
 
   CAMLreturn(caml_copy_int64(hh));
@@ -299,7 +299,7 @@ CAMLprim value ml_unicorn_hook_del(value engine, value hook) {
 
   if ((err = uc_hook_del(Unicorn_handle_val(engine), Int64_val(hook))) != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
-                        ml_uc_err_to_unicorn(err));
+                        Val_int(err));
   }
 
   CAMLreturn(Val_unit);
@@ -325,7 +325,7 @@ CAMLprim value ml_unicorn_query(value engine, value query) {
   size_t result = 0;
   if ((err = uc_query(Unicorn_handle_val(engine), Int_val(query), &result)) != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
-                        ml_uc_err_to_unicorn(err));
+                        Val_int(err));
   }
 
   CAMLreturn(caml_copy_int64(result));

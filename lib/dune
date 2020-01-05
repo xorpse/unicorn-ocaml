@@ -1,30 +1,33 @@
 (library
-  (name unicorn)
-  (public_name unicorn)
-  (modules unicorn
-           uc_const
-           arm64_const
-           arm64
-           arm_const
-           arm
-           m68k_const
-           m68k
-           mips_const
-           mips
-           sparc_const
-           sparc
-           x86_const
-           x86)
-  (c_names unicorn_stubs
-           uc_const_stubs
-           arm64_const_stubs
-           arm_const_stubs
-           m68k_const_stubs
-           mips_const_stubs
-           sparc_const_stubs
-           x86_const_stubs)
-  (c_flags (-Wall -Wextra))
-  (c_library_flags (-lunicorn)))
+ (name unicorn)
+ (public_name unicorn)
+ (modules unicorn
+          types
+          uc_const
+          aarch
+          arm64_const
+          arm_const
+          arm
+          m68k_const
+          m68k
+          mips_const
+          mips
+          sparc_const
+          sparc
+          x86_const
+          x86
+          x86_64)
+ (c_names unicorn_stubs
+          uc_const_stubs
+          arm64_const_stubs
+          arm_const_stubs
+          m68k_const_stubs
+          mips_const_stubs
+          sparc_const_stubs
+          x86_const_stubs)
+ (c_flags (-Wall -Wextra))
+ (c_library_flags (-lunicorn))
+ (libraries stdint))
 
 (rule
  (targets uc_const.ml
