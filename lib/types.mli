@@ -80,12 +80,7 @@ module Mode : sig
 end
 
 type handle
-type ('family, 'word) engine = {
-  family    : 'family;
-  endian    : Endian.t;
-  word_size : 'word Size.t;
-  handle    : handle;
-}
+type ('family, 'word) engine
 
 module type S = sig
   type arch
@@ -107,4 +102,4 @@ end
 type ('arch, 'id, 'word) reg = 'arch * 'id * 'word Size.t
 
 val create_ffi : arch:Uc_const.Arch.t -> mode:'arch Mode.t -> handle
-val engine : family:([< Family.any ] as 'f) -> endian:Endian.t -> word_size:'w Size.t -> handle -> ('f, 'w) engine
+val engine : family:'family -> endian:Endian.t -> word_size:'w Size.t -> handle -> ('family, 'w) engine

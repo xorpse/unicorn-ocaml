@@ -25,9 +25,6 @@ module Const = struct
   module Mode = Uc_const.Mode
 end
 
-type handle = Types.handle
-type ('family, 'word) engine = ('family, 'word) Types.engine
-
 exception Unicorn_error of Const.Err.t
 let _ = Callback.register_exception "Unicorn_error" (Unicorn_error Const.Err.ok)
 
@@ -174,6 +171,6 @@ end
 let create (type a) (type f) (type w)
     ?(mode : a Mode.t option)
     (module M : Types.S with type arch   = a
-                   and type family = f
-                   and type word   = w) =
+                         and type family = f
+                         and type word   = w) =
   M.create ?mode ()
