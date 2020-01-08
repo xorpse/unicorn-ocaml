@@ -1,38 +1,39 @@
 open Stdint
-open! Types
+open Types
 
-module Arm = Arm
-module Aarch = Aarch
-module M68k = M68k
-module Mips64 = Mips.M64
-module Mips = Mips.M32
+module Arm     = Arm
+module Aarch64 = Aarch64
+module M68k    = M68k
+module Mips64  = Mips.M64
+module Mips    = Mips.M32
 module Sparc64 = Sparc.M32
-module Sparc = Sparc.M32
-module X86 = X86
-module X86_64 = X86_64
+module Sparc   = Sparc.M32
+module X86     = X86
+module X86_64  = X86_64
 
-module Arch = Types.Arch
-module Endian = Types.Endian
-module Family = Types.Family
-module Mode = Types.Mode
+module Types   = Types
+module Arch    = Types.Arch
+module Endian  = Types.Endian
+module Family  = Types.Family
+module Mode    = Types.Mode
 
-module type S = Types.S
-
-type handle = Types.handle
-type ('family, 'endian, 'word) engine = ('family, 'endian, 'word) Types.engine
 
 module Const = struct
   module Arch = Uc_const.Arch
-  module Err = Uc_const.Err
+  module Err  = Uc_const.Err
   module Hook = Uc_const.HookType
   module Mode = Uc_const.Mode
 end
+
+type handle = Types.handle
+type ('family, 'word) engine = ('family, 'word) Types.engine
 
 exception Unicorn_error of Const.Err.t
 let _ = Callback.register_exception "Unicorn_error" (Unicorn_error Const.Err.ok)
 
 external version    : unit -> int * int = "ml_unicorn_version"
 
+(*
 module Memory = struct
   module Permission = struct
     type t = private int32
@@ -44,6 +45,7 @@ module Memory = struct
   end
 
 end
+*)
 
 (*
 module Hook = struct
@@ -134,38 +136,44 @@ let create (type a) (type r) (type i) ?(mode : a Mode.t option) (arch : (a, r, i
   in
   let mode'' = match mode' with None -> 0 | Some v -> Mode.to_int_mode v in
   T (arch, create_ffi ~arch:arch' ~mode:mode'')
-
-module Register = struct
-  let write (type a) (type rt) (type rs) (type i) (_e : (a, rt, i) engine) (_r : (rt, rs) reg) (_v : rs) : unit =
-    failwith "unimplemented"
-
-  let read (type a) (type rt) (type rs) (type i) (_e : (a, rt, i) engine) (_r : (rt, rs) reg) : rs =
-    failwith "unimplemented"
-end
    *)
 
-let create (type a) (type f) (type w) (type e)
-    ?(mode : a mode option)
-    (module M : S with type arch = a
+module Register = struct
+  let write (type a) (type f) (type w) (type e) (type r) (type rs)
+      (module M : Types.S_Reg with type arch = a
+                         and type family = f
+                         and type word = w
+                         and type Reg.Id.t = r)
+      (_e : (f, w) engine) (_r : (a, r, rs) reg) (_v : rs) : unit =
+    failwith "unimplemented"
+
+  let read : 'rs. (module S_Reg with type arch = 'a
+                                 and type family = 'f
+                                 and type word = 'w
+                                 and type Reg.Id.t = 'r)
+    -> ('f, 'w) engine
+    -> ('a, 'r, 'rs) reg
+    -> 'rs = fun _m _e _r ->
+    failwith "unimplemented"
+end
+
+module Memory = struct
+  let read_word (type f) (type w)
+      (module M : Types.S with type family = f
+                     and type word = w)
+      (_e : (f, w) engine) (_a : w) : w =
+    failwith "unimplemented"
+
+  let write_word (type f) (type w)
+      (module M : Types.S with type family = f
+                     and type word = w)
+      (_e : (f, w) engine) (_a : w) (_v : w) : unit =
+    failwith "unimplemented"
+end
+
+let create (type a) (type f) (type w)
+    ?(mode : a Mode.t option)
+    (module M : Types.S with type arch   = a
                    and type family = f
-                   and type endian = e
-                   and type word = w) =
+                   and type word   = w) =
   M.create ?mode ()
-
-let into_m16 (type f) (type w) (type e)
-    (module M : Into16 with type endian = e
-                        and type family = f
-                        and type word = w) =
-  M.into_m16
-
-let into_m32 (type f) (type w) (type e)
-    (module M : Into32 with type endian = e
-                        and type family = f
-                        and type word = w) =
-  M.into_m32
-
-let into_m64 (type f) (type w) (type e)
-    (module M : Into64 with type endian = e
-                        and type family = f
-                        and type word = w) =
-  M.into_m64

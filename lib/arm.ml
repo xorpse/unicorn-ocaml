@@ -6,18 +6,16 @@ type family = Family.arm
 type word   = uint32
 
 module Reg = struct
+  module Id = Arm_const.Reg
   (* TODO *)
 end
 
-module Make (E : Endian.S) = struct
-  type nonrec arch   = arch
-  type nonrec family = family
-  type nonrec word   = word
-  type endian        = E.endian
-
-  let create ?mode () =
-    let default_mode = (E.mode :> arch mode) in
-    let mode = match mode with None -> default_mode | Some m -> Mode.(m & default_mode) in
-    let h = create_ffi ~arch:Uc_const.Arch.arm ~mode in
-    engine ~family:`ARM ~endian:E.endian ~word_size:Word.W32 h
-end
+let create ?mode ?endian () =
+  let endian = match endian with Some e -> e | None -> Endian.Little in
+  let default_mode = match endian with
+    | Endian.Big -> Mode.big_endian
+    | Endian.Little -> Mode.little_endian
+  in
+  let mode = match mode with None -> default_mode | Some m -> Mode.(m & default_mode) in
+  let h = create_ffi ~arch:Uc_const.Arch.arm ~mode in
+  engine ~family:`ARM ~endian:endian ~word_size:Size.W32 h

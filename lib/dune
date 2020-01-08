@@ -4,7 +4,7 @@
  (modules unicorn
           types
           uc_const
-          aarch
+          aarch64
           arm64_const
           arm_const
           arm

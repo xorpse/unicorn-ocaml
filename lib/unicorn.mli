@@ -1,7 +1,7 @@
-open! Types
+open Stdint
 
 module Arm     : module type of Arm
-module Aarch   : module type of Aarch
+module Aarch64 : module type of Aarch64
 module M68k    : module type of M68k
 module Mips64  : module type of Mips.M64
 module Mips    : module type of Mips.M32
@@ -9,6 +9,8 @@ module Sparc64 : module type of Sparc.M32
 module Sparc   : module type of Sparc.M32
 module X86     : module type of X86
 module X86_64  : module type of X86_64
+
+module Types   : module type of Types
 
 module Arch    : module type of Types.Arch
 module Endian  : module type of Types.Endian
@@ -42,14 +44,49 @@ module Const   : sig
   end
 end
 
-module type S = Types.S
-
 exception Unicorn_error of Const.Err.t
 
-type ('family, 'endian, 'word) engine
+open! Types
 
-val create  : ?mode:'a mode -> (module S with type arch = 'a
-                                          and type endian = 'e
-                                          and type family = 'f
-                                          and type word = 'w) -> ('f, 'e, 'w) engine
+type ('family, 'word) engine
+
+module Register : sig
+  val write : (module S_Reg with type arch = 'a
+                             and type family = 'f
+                             and type word = 'w
+                             and type Reg.Id.t = 'r)
+    -> ('f, 'w) engine
+    -> ('a, 'r, 's) reg
+    -> 's
+    -> unit
+
+  val read : (module S_Reg with type arch = 'a
+                            and type family = 'f
+                            and type word = 'w
+                            and type Reg.Id.t = 'r)
+    -> ('f, 'w) engine
+    -> ('a, 'r, 's) reg
+    -> 's
+end
+
+module Memory : sig
+  val read_word : (module S with type family = 'f
+                             and type word = 'w)
+    -> ('f, 'w) engine
+    -> 'w
+    -> 'w
+
+  val write_word : (module S with type family = 'f
+                              and type word = 'w)
+    -> ('f, 'w) engine
+    -> 'w
+    -> 'w
+    -> unit
+end
+
+val create : ?mode:'a Mode.t
+  -> (module S with type arch = 'a
+                and type family = 'f
+                and type word = 'w)
+  -> ('f, 'w) engine
 val version : unit -> int * int
