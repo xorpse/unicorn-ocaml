@@ -101,19 +101,37 @@ module type S = sig
   val create : ?mode:arch Mode.t -> unit -> (family, word) engine
 end
 
+type ('arch, 'id, 'word) reg = 'arch * 'id * 'word Size.t
+
 module type S_Reg = sig
   include S
   module Reg : sig
     module Id : sig
       type t
     end
+    val read  : (family, word) engine -> (arch, Id.t, 'w) reg -> 'w
+    val write : (family, word) engine -> (arch, Id.t, 'w) reg -> 'w -> unit
   end
 end
 
-type ('arch, 'id, 'word) reg = 'arch * 'id * 'word Size.t
+external reg_write_uint8_ffi : handle -> int -> uint8 -> unit = "ml_unicorn_reg_write_uint8"
+external reg_write_uint16_ffi : handle -> int -> uint16 -> unit = "ml_unicorn_reg_write_uint16"
+external reg_write_uint32_ffi : handle -> int -> uint32 -> unit = "ml_unicorn_reg_write_uint32"
+external reg_write_uint64_ffi : handle -> int -> uint64 -> unit = "ml_unicorn_reg_write_uint64"
+
+external reg_read_uint8_ffi : handle -> int -> uint8 = "ml_unicorn_reg_read_uint8"
+external reg_read_uint16_ffi : handle -> int -> uint16 = "ml_unicorn_reg_read_uint16"
+external reg_read_uint32_ffi : handle -> int -> uint32 = "ml_unicorn_reg_read_uint32"
+external reg_read_uint64_ffi : handle -> int -> uint64 = "ml_unicorn_reg_read_uint64"
+
 
 external create_ffi : arch:Uc_const.Arch.t -> mode:'arch Mode.t -> handle = "ml_unicorn_create"
 
 let engine ~family ~endian ~word_size handle = {
   family; endian; word_size; handle
 }
+
+let family { family; _ } = family
+let endian { endian; _ } = endian
+let word_size { word_size; _ } = word_size
+let handle { handle; _ } = handle

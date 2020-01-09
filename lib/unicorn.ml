@@ -28,149 +28,243 @@ end
 exception Unicorn_error of Const.Err.t
 let _ = Callback.register_exception "Unicorn_error" (Unicorn_error Const.Err.ok)
 
-external version    : unit -> int * int = "ml_unicorn_version"
+external version : unit -> int * int = "ml_unicorn_version"
+external start_ffi : handle -> uint64 -> uint64 -> uint64 -> int -> unit = "ml_unicorn_start"
+external stop_ffi : handle -> unit = "ml_unicorn_stop"
 
-(*
 module Memory = struct
   module Permission = struct
     type t = private int32
   end
 
-  module Access = struct
-    (* uc_mem_type *)
-    type t = private int
-  end
+  external read_uint8_ffi : handle -> uint8 -> uint8 = "ml_unicorn_read_uint8"
+  external read_uint16_ffi : handle -> uint16 -> uint16 = "ml_unicorn_read_uint16"
+  external read_uint32_ffi : handle -> uint32 -> uint32 = "ml_unicorn_read_uint32"
+  external read_uint64_ffi : handle -> uint64 -> uint64 = "ml_unicorn_read_uint64"
 
+  (* TODO: handle endian? *)
+  let read_word (type f) (type w)
+      (module M : Types.S with type family = f
+                           and type word = w)
+      (e : (f, w) engine) (a : w) : w =
+    let h = Types.handle e in
+    match Types.word_size e with
+      | Size.W8 -> read_uint8_ffi h a
+      | Size.W16 -> read_uint16_ffi h a
+      | Size.W32 -> read_uint32_ffi h a
+      | Size.W64 -> read_uint64_ffi h a
+
+  external write_uint8_ffi : handle -> uint8 -> uint8 -> unit = "ml_unicorn_write_uint8"
+  external write_uint16_ffi : handle -> uint16 -> uint16 -> unit = "ml_unicorn_write_uint16"
+  external write_uint32_ffi : handle -> uint32 -> uint32 -> unit = "ml_unicorn_write_uint32"
+  external write_uint64_ffi : handle -> uint64 -> uint64 -> unit = "ml_unicorn_write_uint64"
+
+  let write_word (type f) (type w)
+      (module M : Types.S with type family = f
+                           and type word = w)
+      (e : (f, w) engine) (a : w) (v : w) : unit =
+    let h = Types.handle e in
+    match Types.word_size e with
+      | Size.W8 -> write_uint8_ffi h a v
+      | Size.W16 -> write_uint16_ffi h a v
+      | Size.W32 -> write_uint32_ffi h a v
+      | Size.W64 -> write_uint64_ffi h a v
+
+  external read_bytes_ffi : handle -> uint64 -> int -> bytes = "ml_unicorn_read_bytes"
+
+  let read_bytes (type f) (type w)
+      (e : (f, w) engine) (a : w) (n : int) : bytes =
+    let h = Types.handle e in
+    let a = match Types.word_size e with
+      | Size.W8 -> Uint8.to_uint64 a
+      | Size.W16 -> Uint16.to_uint64 a
+      | Size.W32 -> Uint32.to_uint64 a
+      | Size.W64 -> a
+    in
+    read_bytes_ffi h a n
+
+  external write_bytes_ffi : handle -> uint64 -> bytes -> unit = "ml_unicorn_write_bytes"
+
+  let write_bytes (type f) (type w)
+      (e : (f, w) engine) (a : w) (buf : bytes) : unit =
+    let h = Types.handle e in
+    let a = match Types.word_size e with
+      | Size.W8 -> Uint8.to_uint64 a
+      | Size.W16 -> Uint16.to_uint64 a
+      | Size.W32 -> Uint32.to_uint64 a
+      | Size.W64 -> a
+    in
+    write_bytes_ffi h a buf
+
+  external map_ffi : handle -> uint64 -> int -> int32 -> unit = "ml_unicorn_map"
+
+  let map (type f) (type w)
+      (e : (f, w) engine) (a : w) (n : int) (p : Permission.t) : unit =
+    let h = Types.handle e in
+    let a = match Types.word_size e with
+      | Size.W8 -> Uint8.to_uint64 a
+      | Size.W16 -> Uint16.to_uint64 a
+      | Size.W32 -> Uint32.to_uint64 a
+      | Size.W64 -> a
+    in
+    map_ffi h a n (p :> int32)
+
+  let map_bytes (type f) (type w)
+      (e : (f, w) engine) (a : w) (buf : bytes) (p : Permission.t) : unit =
+    map e a (Bytes.length buf) p; write_bytes e a buf
+
+  external unmap_ffi : handle -> uint64 -> int -> unit = "ml_unicorn_unmap"
+
+  let unmap (type f) (type w)
+      (e : (f, w) engine) (a : w) (n : int) : unit =
+    let h = Types.handle e in
+    let a = match Types.word_size e with
+      | Size.W8 -> Uint8.to_uint64 a
+      | Size.W16 -> Uint16.to_uint64 a
+      | Size.W32 -> Uint32.to_uint64 a
+      | Size.W64 -> a
+    in
+    unmap_ffi h a n
+
+  external protect_ffi : handle -> uint64 -> int -> int32 -> unit = "ml_unicorn_protect"
+
+  let protect (type f) (type w)
+      (e : (f, w) engine) (a : w) (n : int) (p : Permission.t) : unit =
+    let h = Types.handle e in
+    let a = match Types.word_size e with
+      | Size.W8 -> Uint8.to_uint64 a
+      | Size.W16 -> Uint16.to_uint64 a
+      | Size.W32 -> Uint32.to_uint64 a
+      | Size.W64 -> a
+    in
+    protect_ffi h a n (p :> int32)
 end
-*)
 
-(*
 module Hook = struct
-  module Mem = struct
-    module Valid = struct
-      type t = int
+  module Memory = struct
+    module Access = struct
+      module Valid = struct
+        type t = int
 
-      let read = (Const.Hook.mem_read :> t)
-      let write = (Const.Hook.mem_write :> t)
-      let fetch = (Const.Hook.mem_fetch :> t)
-      let read_after = (Const.Hook.mem_read_after :> t)
+        let read = (Const.Hook.mem_read :> t)
+        let write = (Const.Hook.mem_write :> t)
+        let fetch = (Const.Hook.mem_fetch :> t)
+        let read_after = (Const.Hook.mem_read_after :> t)
 
-      let (&) = (land)
-    end
+        let (&) = (lor)
+      end
 
-    module Invalid = struct
-      type t = int
+      module Invalid = struct
+        type t = int
 
-      let read_unmapped = (Const.Hook.mem_read_unmapped :> t)
-      let write_unmapped = (Const.Hook.mem_write_unmapped :> t)
-      let fetch_unmapped = (Const.Hook.mem_fetch_unmapped :> t)
+        let read_unmapped = (Const.Hook.mem_read_unmapped :> t)
+        let write_unmapped = (Const.Hook.mem_write_unmapped :> t)
+        let fetch_unmapped = (Const.Hook.mem_fetch_unmapped :> t)
 
-      let read_prot = (Const.Hook.mem_read_prot :> t)
-      let write_prot = (Const.Hook.mem_write_prot :> t)
-      let fetch_prot = (Const.Hook.mem_fetch_prot :> t)
+        let read_prot = (Const.Hook.mem_read_prot :> t)
+        let write_prot = (Const.Hook.mem_write_prot :> t)
+        let fetch_prot = (Const.Hook.mem_fetch_prot :> t)
 
-      let (&) = (land)
+        let (&) = (lor)
+      end
     end
   end
 
   type 'v cont = Continue of 'v
                | Stop of 'v
 
-  type ('a, 'r, 'i, 'v) callback =
-    | M_HOOK_CODE    : (('a, 'r, 'i) engine -> int64 -> int32 -> 'v -> 'v) -> ('a, 'r, 'i, 'v) callback
-    | M_HOOK_INTR    : (('a, 'r, 'i) engine -> int32 -> 'v -> 'v) -> ('a, 'r, 'i, 'v) callback
-    | M_HOOK_MEM     : (('a, 'r, 'i) engine -> Memory.Access.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) * Mem.Valid.t -> ('a, 'r, 'i, 'v) callback
-    | M_HOOK_MEMEV   : (('a, 'r, 'i) engine -> Memory.Access.t -> int64 -> int -> int64 -> 'v -> 'v cont) * Mem.Invalid.t -> ('a, 'r, 'i, 'v) callback
-    | M_HOOK_X86_IN  : (([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> 'v -> int32 * 'v) -> ([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t, 'v) callback
-    | M_HOOK_X86_OUT : (([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t) engine -> int32 -> int -> int32 -> 'v -> 'v) -> ([ `X86 ], X86.Const.Reg.t, X86.Const.Insn.t, 'v) callback
+  type ('f, 'w, 'v) callback =
+    | M_HOOK_CODE    : (('f, 'w) engine -> int64 -> int32 -> 'v -> 'v) -> ('f, 'w, 'v) callback
+    | M_HOOK_INTR    : (('f, 'w) engine -> int32 -> 'v -> 'v) -> ('f, 'w, 'v) callback
+    | M_HOOK_MEM     : (('f, 'w) engine -> Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) * Memory.Access.Valid.t -> ('f, 'w, 'v) callback
+    | M_HOOK_MEMEV   : (('f, 'w) engine -> Memory.Access.Valid.t -> int64 -> int -> int64 -> 'v -> 'v cont) * Memory.Access.Invalid.t -> ('f, 'w, 'v) callback
+(*
+    | M_HOOK_X86_IN  : ((Family.x86, 'w) engine -> int32 -> int -> 'v -> int32 * 'v) -> (Family.x86, 'w, 'v) callback
+    | M_HOOK_X86_OUT : ((Family.x86, 'w) engine -> int32 -> int -> int32 -> 'v -> 'v) -> (Family.x86, 'w, 'v) callback
+ *)
 
   let code f = M_HOOK_CODE f
   let intr f = M_HOOK_INTR f
   let mem f t = M_HOOK_MEM (f, t)
   let mem_ev f t = M_HOOK_MEMEV (f, t)
+(*
   let in_ f = M_HOOK_X86_IN f
   let out f = M_HOOK_X86_OUT f
+*)
 
   external hook_add_code_ffi : handle -> Const.Hook.t -> (handle -> int64 -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
   external hook_add_intr_ffi : handle -> Const.Hook.t -> (handle -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_mem_ffi : handle -> Mem.Valid.t -> (handle -> Memory.Access.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_memev_ffi : handle -> Mem.Invalid.t -> (handle -> Memory.Access.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_mem_ffi : handle -> Memory.Access.Valid.t -> (handle -> Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_memev_ffi : handle -> Memory.Access.Invalid.t -> (handle -> Memory.Access.Invalid.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
 
+  (*
   external hook_add_insn_in_ffi : handle -> Const.Hook.t -> (handle -> int32 -> int -> 'v -> int32 * 'v) -> 'v -> X86.Const.Insn.t -> int64 = "ml_unicorn_hook_add_insn"
   external hook_add_insn_out_ffi : handle -> Const.Hook.t -> (handle -> int32 -> int -> int32 -> 'v -> 'v) -> 'v -> X86.Const.Insn.t -> int64 = "ml_unicorn_hook_add_insn"
+     *)
 
   external hook_del_ffi : handle -> int64 -> unit = "ml_unicorn_hook_del"
 
-  type ('a, 'r, 'i) handle = ('a, 'r, 'i) engine * int64
+  type ('f, 'w) handle = ('f, 'w) engine * int64
 
-  let add (type a) (type r) (type i) (type v) (e : (a, r, i) engine) (cb : (a, r, i, v) callback) (init : v) : (a, r, i) handle =
-    let T (a, eh) = e in
-    let mk_f f e' = f (T (a, e')) in
+  let add (type f) (type w) (type v) (e : (f, w) engine) (cb : (f, w, v) callback) (init : v) : (f, w) handle =
+    let family = Types.family e in
+    let endian = Types.endian e in
+    let word_size = Types.word_size e in
+    let h = Types.handle e in
+    let mk_f f h' = f (engine ~family ~endian ~word_size h') in
     let h = match cb with
-      | M_HOOK_CODE f -> hook_add_code_ffi eh Const.Hook.code (mk_f f) init
-      | M_HOOK_INTR f -> hook_add_intr_ffi eh Const.Hook.intr (mk_f f) init
-      | M_HOOK_MEM (f, t) -> hook_add_mem_ffi eh t (mk_f f) init
-      | M_HOOK_MEMEV (f, t) -> hook_add_memev_ffi eh t (mk_f f) init
+      | M_HOOK_CODE f -> hook_add_code_ffi h Const.Hook.code (mk_f f) init
+      | M_HOOK_INTR f -> hook_add_intr_ffi h Const.Hook.intr (mk_f f) init
+      | M_HOOK_MEM (f, t) -> hook_add_mem_ffi h t (mk_f f) init
+      | M_HOOK_MEMEV (f, t) -> hook_add_memev_ffi h t (mk_f f) init
+                                 (*
       | M_HOOK_X86_IN f -> hook_add_insn_in_ffi eh Const.Hook.insn (mk_f f) init X86.Const.Insn.in_
       | M_HOOK_X86_OUT f -> hook_add_insn_out_ffi eh Const.Hook.insn (mk_f f) init X86.Const.Insn.out
+                                    *)
     in (e, h)
 
-  let remove (type a) (type r) (type i) (e : (a, r, i) engine) (eh : (a, r, i) handle) =
-    let (_, h) = eh in
-    hook_del_ffi (handle e) h
-
+  let remove (type f) (type w) (e : (f, w) engine) (eh : (f, w) handle) : unit =
+    let (eh, h) = eh in
+    assert (eh = e);
+    hook_del_ffi (handle eh) h
 end
 
-let create (type a) (type r) (type i) ?(mode : a Mode.t option) (arch : (a, r, i) Arch.t) : (a, r, i) engine =
-  let arch', mode' = match arch with
-    | Arch.ARM -> Const.Arch.arm, mode
-    | Arch.AARCH64 -> Const.Arch.arm64, mode
-    | Arch.M68K -> Const.Arch.m68k, mode
-    | Arch.MIPS -> Const.Arch.mips, mode
-    | Arch.SPARC -> Const.Arch.sparc, mode
-    | Arch.X86 -> Const.Arch.x86, mode
-    | Arch.X86_64 -> Const.Arch.x86, match mode with None -> Some Mode.mode_64 | Some v -> Some (Mode.(v & mode_64))
-  in
-  let mode'' = match mode' with None -> 0 | Some v -> Mode.to_int_mode v in
-  T (arch, create_ffi ~arch:arch' ~mode:mode'')
-   *)
-
 module Register = struct
-  let write (type a) (type f) (type w) (type e) (type r) (type rs)
+  let write (type a) (type f) (type w) (type r) (type rs)
       (module M : Types.S_Reg with type arch = a
+                               and type family = f
+                               and type word = w
+                               and type Reg.Id.t = r)
+      (e : (f, w) engine) (r : (a, r, rs) reg) (v : rs) : unit =
+    M.Reg.write e r v
+
+  let read (type a) (type f) (type w) (type r) (type rs)
+      (module M : S_Reg with type arch = a
                          and type family = f
                          and type word = w
                          and type Reg.Id.t = r)
-      (_e : (f, w) engine) (_r : (a, r, rs) reg) (_v : rs) : unit =
-    failwith "unimplemented"
-
-  let read : 'rs. (module S_Reg with type arch = 'a
-                                 and type family = 'f
-                                 and type word = 'w
-                                 and type Reg.Id.t = 'r)
-    -> ('f, 'w) engine
-    -> ('a, 'r, 'rs) reg
-    -> 'rs = fun _m _e _r ->
-    failwith "unimplemented"
+    (e : (f, w) engine) (r : (a, r, rs) reg) : rs =
+    M.Reg.read e r
 end
 
-module Memory = struct
-  let read_word (type f) (type w)
-      (module M : Types.S with type family = f
-                     and type word = w)
-      (_e : (f, w) engine) (_a : w) : w =
-    failwith "unimplemented"
+type timeout = uint64
 
-  let write_word (type f) (type w)
-      (module M : Types.S with type family = f
-                     and type word = w)
-      (_e : (f, w) engine) (_a : w) (_v : w) : unit =
-    failwith "unimplemented"
-end
+let no_timeout = Uint64.zero
+let timeout t = if Uint64.(t = zero) then invalid_arg "timeout must be greater than 0" else t
 
-let create (type a) (type f) (type w)
-    ?(mode : a Mode.t option)
-    (module M : Types.S with type arch   = a
-                         and type family = f
-                         and type word   = w) =
-  M.create ?mode ()
+type instruction_count = int
+
+let no_limit = 0
+let limit t = if t = 0 then invalid_arg "instruction count limit must be greater than 0" else t
+
+let start (type f) (type w) ?(timeout : timeout = no_timeout) ?(limit : instruction_count = no_limit) ~(address : w) ~(until : w) (e : (f, w) engine) =
+  let a, u = match Types.word_size e with
+    | Size.W8 -> Uint8.(to_uint64 address, to_uint64 until)
+    | Size.W16 -> Uint16.(to_uint64 address, to_uint64 until)
+    | Size.W32 -> Uint32.(to_uint64 address, to_uint64 until)
+    | Size.W64 -> Uint64.(to_uint64 address, to_uint64 until)
+  in
+  start_ffi Types.(handle e) a u timeout limit
+
+let stop (type f) (type w) (e : (f, w) engine) : unit =
+  stop_ffi (handle e)

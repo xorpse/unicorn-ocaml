@@ -90,16 +90,33 @@ module type S = sig
   val create : ?mode:arch Mode.t -> unit -> (family, word) engine
 end
 
+type ('arch, 'id, 'word) reg = 'arch * 'id * 'word Size.t
+
 module type S_Reg = sig
   include S
   module Reg : sig
     module Id : sig
       type t
     end
+    val read  : (family, word) engine -> (arch, Id.t, 'w) reg -> 'w
+    val write : (family, word) engine -> (arch, Id.t, 'w) reg -> 'w -> unit
   end
 end
 
-type ('arch, 'id, 'word) reg = 'arch * 'id * 'word Size.t
+val reg_write_uint8_ffi : handle -> int -> uint8 -> unit
+val reg_write_uint16_ffi : handle -> int -> uint16 -> unit
+val reg_write_uint32_ffi : handle -> int -> uint32 -> unit
+val reg_write_uint64_ffi : handle -> int -> uint64 -> unit
+
+val reg_read_uint8_ffi : handle -> int -> uint8
+val reg_read_uint16_ffi : handle -> int -> uint16
+val reg_read_uint32_ffi : handle -> int -> uint32
+val reg_read_uint64_ffi : handle -> int -> uint64
 
 val create_ffi : arch:Uc_const.Arch.t -> mode:'arch Mode.t -> handle
+
 val engine : family:'family -> endian:Endian.t -> word_size:'w Size.t -> handle -> ('family, 'w) engine
+val family : ('f, 'w) engine -> 'f
+val endian : ('f, 'w) engine -> Endian.t
+val word_size : ('f, 'w) engine -> 'w Size.t
+val handle : ('f, 'w) engine -> handle

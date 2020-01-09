@@ -105,6 +105,24 @@ module Reg = struct
   let cr3    = `X86_64, Id.cr3, Size.W64
   let cr4    = `X86_64, Id.cr4, Size.W64
 
+  let read (type rs) e (r : (arch * Id.t * rs Size.t)) : rs =
+    let h = Types.handle e in
+    let (_, r, s) = r in
+    match s with
+    | Size.W8 -> Types.reg_read_uint8_ffi h (r :> int)
+    | Size.W16 -> Types.reg_read_uint16_ffi h (r :> int)
+    | Size.W32 -> Types.reg_read_uint32_ffi h (r :> int)
+    | Size.W64 -> Types.reg_read_uint64_ffi h (r :> int)
+
+  let write (type rs) e (r : (arch * Id.t * rs Size.t)) (v : rs) =
+    let h = Types.handle e in
+    let (_, r, s) = r in
+    match s with
+    | Size.W8 -> Types.reg_write_uint8_ffi h (r :> int) v
+    | Size.W16 -> Types.reg_write_uint16_ffi h (r :> int) v
+    | Size.W32 -> Types.reg_write_uint32_ffi h (r :> int) v
+    | Size.W64 -> Types.reg_write_uint64_ffi h (r :> int) v
+
   (* TODO!
   let xmm0 = Id.xmm0, Size.W128
   let ymm0 = Id.ymm0, Size.W256

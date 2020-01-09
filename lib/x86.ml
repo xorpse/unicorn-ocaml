@@ -101,6 +101,23 @@ module Reg = struct
   let tr = Id.tr, X86_MMR (* all fields *)
   let msr = Id.msr, X86_MSR
 *)
+  let read (type rs) e (r : (arch, Id.t, rs) reg) : rs =
+    let h = Types.handle e in
+    let (_, r, s) = r in
+    match s with
+    | Size.W8 -> Types.reg_read_uint8_ffi h (r :> int)
+    | Size.W16 -> Types.reg_read_uint16_ffi h (r :> int)
+    | Size.W32 -> Types.reg_read_uint32_ffi h (r :> int)
+    | Size.W64 -> Types.reg_read_uint64_ffi h (r :> int)
+
+  let write (type rs) e (r : (arch, Id.t, rs) reg) (v : rs) =
+    let h = Types.handle e in
+    let (_, r, s) = r in
+    match s with
+    | Size.W8 -> Types.reg_write_uint8_ffi h (r :> int) v
+    | Size.W16 -> Types.reg_write_uint16_ffi h (r :> int) v
+    | Size.W32 -> Types.reg_write_uint32_ffi h (r :> int) v
+    | Size.W64 -> Types.reg_write_uint64_ffi h (r :> int) v
 end
 
 type mmr = {

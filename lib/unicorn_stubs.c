@@ -15,6 +15,12 @@
 #include <caml/mlvalues.h>
 #include <caml/version.h>
 
+// from stdint
+#include <uint8.h>
+#include <uint16.h>
+#include <uint32.h>
+#include <uint64.h>
+
 #include <unicorn/arm.h>
 #include <unicorn/arm64.h>
 #include <unicorn/unicorn.h>
@@ -329,4 +335,325 @@ CAMLprim value ml_unicorn_query(value engine, value query) {
   }
 
   CAMLreturn(caml_copy_int64(result));
+}
+
+CAMLprim value ml_unicorn_read_uint8(value engine, value address) {
+  CAMLparam2(engine, address);
+
+  uc_err err;
+  uint8_t v = 0;
+  if ((err = uc_mem_read(Unicorn_handle_val(engine), (uint64_t)Uint8_val(address), (void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_uint8(v));
+}
+
+CAMLprim value ml_unicorn_read_uint16(value engine, value address) {
+  CAMLparam2(engine, address);
+
+  uc_err err;
+  uint16_t v = 0;
+  if ((err = uc_mem_read(Unicorn_handle_val(engine), (uint64_t)Uint16_val(address), (void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_uint16(v));
+}
+
+CAMLprim value ml_unicorn_read_uint32(value engine, value address) {
+  CAMLparam2(engine, address);
+
+  uc_err err;
+  uint32_t v = 0;
+  if ((err = uc_mem_read(Unicorn_handle_val(engine), (uint64_t)Uint32_val(address), (void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(copy_uint32(v));
+}
+
+CAMLprim value ml_unicorn_read_uint64(value engine, value address) {
+  CAMLparam2(engine, address);
+
+  uc_err err;
+  uint64_t v = 0;
+  if ((err = uc_mem_read(Unicorn_handle_val(engine), (uint64_t)Uint64_val(address), (void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(copy_uint64(v));
+}
+
+CAMLprim value ml_unicorn_write_uint8(value engine, value address, value val) {
+  CAMLparam3(engine, address, val);
+
+  uc_err err;
+  uint8_t v = Uint8_val(val);
+  if ((err = uc_mem_write(Unicorn_handle_val(engine), (uint64_t)Uint64_val(address), (const void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_write_uint16(value engine, value address, value val) {
+  CAMLparam3(engine, address, val);
+
+  uc_err err;
+  uint16_t v = Uint16_val(val);
+  if ((err = uc_mem_write(Unicorn_handle_val(engine), (uint64_t)Uint64_val(address), (const void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_write_uint32(value engine, value address, value val) {
+  CAMLparam3(engine, address, val);
+
+  uc_err err;
+  uint32_t v = Uint32_val(val);
+  if ((err = uc_mem_write(Unicorn_handle_val(engine), (uint64_t)Uint64_val(address), (const void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_write_uint64(value engine, value address, value val) {
+  CAMLparam3(engine, address, val);
+
+  uc_err err;
+  uint64_t v = Uint64_val(val);
+  if ((err = uc_mem_write(Unicorn_handle_val(engine), (uint64_t)Uint64_val(address), (const void *)&v, sizeof(v))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_read_bytes(value engine, value address, value size) {
+  CAMLparam3(engine, address, size);
+  CAMLlocal1(bytes);
+
+  if (Int_val(size) < 0) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(UC_ERR_ARG));
+  }
+
+  uc_err err;
+  bytes = caml_alloc_string(size);
+
+  if ((err = uc_mem_read(Unicorn_handle_val(engine), Uint64_val(address), (void *)Bytes_val(bytes), (size_t)Int_val(size))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(bytes);
+}
+
+CAMLprim value ml_unicorn_write_bytes(value engine, value address, value bytes) {
+  CAMLparam3(engine, address, bytes);
+
+  uc_err err;
+  if ((err = uc_mem_write(Unicorn_handle_val(engine), Uint64_val(address), (const void *)Bytes_val(bytes), (size_t)caml_string_length(bytes))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_map(value engine, value address, value size, value perms) {
+  CAMLparam4(engine, address, size, perms);
+
+  if (Int_val(size) < 0) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(UC_ERR_ARG));
+  }
+
+  uc_err err;
+  if ((err = uc_mem_map(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size), Int32_val(perms))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_unmap(value engine, value address, value size) {
+  CAMLparam3(engine, address, size);
+
+  if (Int_val(size) < 0) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(UC_ERR_ARG));
+  }
+
+  uc_err err;
+  if ((err = uc_mem_unmap(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_protect(value engine, value address, value size, value perms) {
+  CAMLparam4(engine, address, size, perms);
+
+  if (Int_val(size) < 0) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(UC_ERR_ARG));
+  }
+
+  uc_err err;
+  if ((err = uc_mem_protect(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size), Int32_val(perms))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_reg_write_uint8(value engine, value id, value val) {
+  CAMLparam3(engine, id, val);
+
+  uc_err err;
+  uint8_t v = Uint8_val(val);
+  if ((err = uc_reg_write(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_reg_write_uint16(value engine, value id, value val) {
+  CAMLparam3(engine, id, val);
+
+  uc_err err;
+  uint64_t v = Uint16_val(val);
+  if ((err = uc_reg_write(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+CAMLprim value ml_unicorn_reg_write_uint32(value engine, value id, value val) {
+  CAMLparam3(engine, id, val);
+
+  uc_err err;
+  uint32_t v = Uint32_val(val);
+  if ((err = uc_reg_write(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+CAMLprim value ml_unicorn_reg_write_uint64(value engine, value id, value val) {
+  CAMLparam3(engine, id, val);
+
+  uc_err err;
+  uint64_t v = Uint64_val(val);
+  if ((err = uc_reg_write(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_reg_read_uint8(value engine, value id) {
+  CAMLparam2(engine, id);
+
+  uc_err err;
+  uint8_t v;
+  if ((err = uc_reg_read(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_uint8(v));
+}
+
+CAMLprim value ml_unicorn_reg_read_uint16(value engine, value id) {
+  CAMLparam2(engine, id);
+
+  uc_err err;
+  uint16_t v;
+  if ((err = uc_reg_read(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_uint16(v));
+}
+
+CAMLprim value ml_unicorn_reg_read_uint32(value engine, value id) {
+  CAMLparam2(engine, id);
+
+  uc_err err;
+  uint32_t v;
+  if ((err = uc_reg_read(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(copy_uint32(v));
+}
+
+CAMLprim value ml_unicorn_reg_read_uint64(value engine, value id) {
+  CAMLparam2(engine, id);
+
+  uc_err err;
+  uint64_t v;
+  if ((err = uc_reg_read(Unicorn_handle_val(engine), Int_val(id), &v)) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(copy_uint64(v));
+}
+
+CAMLprim value ml_unicorn_start(value engine, value address, value until, value timeout, value count)
+{
+  CAMLparam5(engine, address, until, timeout, count);
+
+  if (Int_val(count) < 0) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(UC_ERR_ARG));
+  }
+
+
+  uc_err err;
+  if ((err = uc_emu_start(Unicorn_handle_val(engine), Uint64_val(address), Uint64_val(until), Uint64_val(timeout), Int_val(count))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
+}
+
+CAMLprim value ml_unicorn_stop(value engine)
+{
+  CAMLparam1(engine);
+
+  uc_err err;
+  if ((err = uc_emu_stop(Unicorn_handle_val(engine))) != UC_ERR_OK) {
+    caml_raise_with_arg(*caml_named_value("Unicorn_error"),
+                        Val_int(err));
+  }
+
+  CAMLreturn(Val_unit);
 }
