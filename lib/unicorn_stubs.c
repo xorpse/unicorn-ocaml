@@ -69,6 +69,7 @@ static CAMLprim value caml_copy_uint8_array(uint8_t *array, size_t len) {
 
 static void ml_unicorn_finalise_handle(value h) {
   CAMLparam1(h);
+  puts("HERE");
   uc_close(Unicorn_handle_val(h));
   CAMLreturn0;
 }
@@ -113,12 +114,11 @@ typedef struct HookCB {
   value v;
 } HookCB;
 
-CAMLprim void ml_unicorn_hook_hndl_insn_out(uc_engine *uc, uint32_t port, int size, uint32_t val, void *user_data) {
+CAMLprim void ml_unicorn_hook_hndl_insn_out(uc_engine *_uc, uint32_t port, int size, uint32_t val, void *user_data) {
   CAMLparam0();
-  CAMLlocal1(engine);
 
   HookCB *ud = (HookCB *)user_data;
-  value args[] = {ml_unicorn_alloc_handle(uc), caml_copy_int32(port), Val_int(size), caml_copy_int32(val), ud->v};
+  value args[] = {caml_copy_int32(port), Val_int(size), caml_copy_int32(val), ud->v};
 
   ud->v = caml_callbackN(ud->f, ARR_SIZE(args), args);
   CAMLreturn0;
@@ -126,7 +126,7 @@ CAMLprim void ml_unicorn_hook_hndl_insn_out(uc_engine *uc, uint32_t port, int si
 
 CAMLprim uint32_t ml_unicorn_hook_hndl_insn_in(uc_engine *uc, uint32_t port, int size, void *user_data) {
   CAMLparam0();
-  CAMLlocal2(engine, nv);
+  CAMLlocal1(nv);
 
   HookCB *ud = (HookCB *)user_data;
   value args[] = {ml_unicorn_alloc_handle(uc), caml_copy_int32(port), Val_int(size), ud->v};
@@ -139,14 +139,14 @@ CAMLprim uint32_t ml_unicorn_hook_hndl_insn_in(uc_engine *uc, uint32_t port, int
   CAMLreturnT(uint32_t, Int32_val(Field(nv, 0)));
 }
 
-CAMLprim bool ml_unicorn_hook_hndl_memev(uc_engine *uc, uc_mem_type type, uint64_t address, int size, int64_t val, void *user_data) {
+CAMLprim bool ml_unicorn_hook_hndl_memev(uc_engine *_uc, uc_mem_type type, uint64_t address, int size, int64_t val, void *user_data) {
   CAMLparam0();
-  CAMLlocal2(engine, nv);
+  CAMLlocal1(nv);
 
   bool cont = false;
 
   HookCB *ud = (HookCB *)user_data;
-  value args[] = {ml_unicorn_alloc_handle(uc), Val_int(type), caml_copy_int64(address), Val_int(size), caml_copy_int64(val), ud->v};
+  value args[] = {Val_int(type), caml_copy_int64(address), Val_int(size), caml_copy_int64(val), ud->v};
 
   nv = caml_callbackN(ud->f, ARR_SIZE(args), args);
 
@@ -164,54 +164,51 @@ CAMLprim bool ml_unicorn_hook_hndl_memev(uc_engine *uc, uc_mem_type type, uint64
   CAMLreturnT(bool, cont);
 }
 
-CAMLprim static void ml_unicorn_hook_hndl_mem(uc_engine *uc, uc_mem_type type, uint64_t address, int size, int64_t val, void *user_data) {
+CAMLprim static void ml_unicorn_hook_hndl_mem(uc_engine *_uc, uc_mem_type type, uint64_t address, int size, int64_t val, void *user_data) {
   CAMLparam0();
-  CAMLlocal5(engine, type_v, address_v, size_v, val_v);
-  CAMLlocal1(nv);
+  CAMLlocal4(type_v, address_v, size_v, val_v);
 
   HookCB *ud = (HookCB *)user_data;
 
-  engine = ml_unicorn_alloc_handle(uc);
   type_v = Val_int(type);
   address_v = caml_copy_int64(address);
   size_v = Val_int(size);
   val_v = caml_copy_int64(val);
 
-  value args[] = {engine, type_v, address_v, size_v, val_v, ud->v};
+  value args[] = {type_v, address_v, size_v, val_v, ud->v};
 
-  ud->v = nv = caml_callbackN(ud->f, ARR_SIZE(args), args);
+  ud->v = caml_callbackN(ud->f, ARR_SIZE(args), args);
 
   CAMLreturn0;
 }
 
-CAMLprim static void ml_unicorn_hook_hndl_intr(uc_engine *uc, uint32_t intno, void *user_data) {
+CAMLprim static void ml_unicorn_hook_hndl_intr(uc_engine *_uc, uint32_t intno, void *user_data) {
   CAMLparam0();
-  CAMLlocal3(engine, intno_v, nv);
+  CAMLlocal1(intno_v);
 
   HookCB *ud = (HookCB *)user_data;
 
-  engine = ml_unicorn_alloc_handle(uc);
   intno_v = caml_copy_int32(intno);
 
-  value args[] = {engine, intno_v, ud->v};
+  value args[] = {intno_v, ud->v};
 
-  ud->v = nv = caml_callbackN(ud->f, ARR_SIZE(args), args);
+  ud->v = caml_callbackN(ud->f, ARR_SIZE(args), args);
   CAMLreturn0;
 }
 
-static void ml_unicorn_hook_hndl_code(uc_engine *uc, uint64_t address, uint32_t size, void *user_data) {
+static void ml_unicorn_hook_hndl_code(uc_engine *_uc, uint64_t address, uint32_t size, void *user_data) {
   CAMLparam0();
-  CAMLlocal4(engine, address_v, size_v, nv);
+  CAMLlocal2(address_v, size_v);
 
   HookCB *ud = (HookCB *)user_data;
 
-  engine = ml_unicorn_alloc_handle(uc);
   address_v = caml_copy_int64(address);
   size_v = caml_copy_int32(size);
 
-  value args[] = {engine, address_v, size_v, ud->v};
+  value args[] = {address_v, size_v, ud->v};
 
-  ud->v = nv = caml_callbackN(ud->f, ARR_SIZE(args), args);
+  ud->v = caml_callbackN(ud->f, ARR_SIZE(args), args);
+
   CAMLreturn0;
 }
 
@@ -237,7 +234,7 @@ CAMLprim value ml_unicorn_hook_add(value engine, value type, value hook, value i
     break;
   case UC_HOOK_CODE:
   case UC_HOOK_BLOCK:
-    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, &ml_unicorn_hook_hndl_code, NULL, (uint64_t)-1, 0);
+    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, &ml_unicorn_hook_hndl_code, (void *)ud, (uint64_t)-1, 0);
     break;
   case UC_HOOK_MEM_READ:
   case UC_HOOK_MEM_WRITE:
@@ -482,7 +479,7 @@ CAMLprim value ml_unicorn_map(value engine, value address, value size, value per
   }
 
   uc_err err;
-  if ((err = uc_mem_map(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size), Int32_val(perms))) != UC_ERR_OK) {
+  if ((err = uc_mem_map(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size), Int_val(perms))) != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
                         Val_int(err));
   }
@@ -516,7 +513,7 @@ CAMLprim value ml_unicorn_protect(value engine, value address, value size, value
   }
 
   uc_err err;
-  if ((err = uc_mem_protect(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size), Int32_val(perms))) != UC_ERR_OK) {
+  if ((err = uc_mem_protect(Unicorn_handle_val(engine), Uint64_val(address), (size_t)Int_val(size), Int_val(perms))) != UC_ERR_OK) {
     caml_raise_with_arg(*caml_named_value("Unicorn_error"),
                         Val_int(err));
   }

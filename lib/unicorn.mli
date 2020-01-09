@@ -7,7 +7,6 @@ module Mips64  : module type of Mips.M64
 module Mips    : module type of Mips.M32
 module Sparc64 : module type of Sparc.M32
 module Sparc   : module type of Sparc.M32
-module X86     : module type of X86
 
 module Types   : sig
   module Arch : module type of Types.Arch
@@ -93,6 +92,75 @@ module Const   : sig
 end
 
 open! Types
+
+module X86     : sig
+  type arch   = Arch.x86
+  type family = Family.x86
+  type word   = uint32
+
+  module Insn : module type of X86.Insn
+  module Reg : sig
+    module Id : module type of X86.Reg.Id
+
+    val al     : (arch, Id.t, uint8) reg
+    val ax     : (arch, Id.t, uint16) reg
+    val eax    : (arch, Id.t, uint32) reg
+    val ah     : (arch, Id.t, uint8) reg
+    val cl     : (arch, Id.t, uint8) reg
+    val cx     : (arch, Id.t, uint16) reg
+    val ecx    : (arch, Id.t, uint32) reg
+    val ch     : (arch, Id.t, uint8) reg
+    val dl     : (arch, Id.t, uint8) reg
+    val dx     : (arch, Id.t, uint16) reg
+    val edx    : (arch, Id.t, uint32) reg
+    val dh     : (arch, Id.t, uint8) reg
+    val bl     : (arch, Id.t, uint8) reg
+    val bx     : (arch, Id.t, uint16) reg
+    val ebx    : (arch, Id.t, uint32) reg
+    val bh     : (arch, Id.t, uint8) reg
+    val spl    : (arch, Id.t, uint8) reg
+    val sp     : (arch, Id.t, uint16) reg
+    val esp    : (arch, Id.t, uint32) reg
+    val bpl    : (arch, Id.t, uint8) reg
+    val bp     : (arch, Id.t, uint16) reg
+    val ebp    : (arch, Id.t, uint32) reg
+    val sil    : (arch, Id.t, uint8) reg
+    val si     : (arch, Id.t, uint16) reg
+    val esi    : (arch, Id.t, uint32) reg
+    val dil    : (arch, Id.t, uint8) reg
+    val di     : (arch, Id.t, uint16) reg
+    val edi    : (arch, Id.t, uint32) reg
+    val es     : (arch, Id.t, uint16) reg
+    val cs     : (arch, Id.t, uint16) reg
+    val ss     : (arch, Id.t, uint16) reg
+    val ds     : (arch, Id.t, uint16) reg
+    val fs     : (arch, Id.t, uint16) reg
+    val gs     : (arch, Id.t, uint16) reg
+    val flags  : (arch, Id.t, uint16) reg
+    val eflags : (arch, Id.t, uint32) reg
+    val ip     : (arch, Id.t, uint16) reg
+    val eip    : (arch, Id.t, uint32) reg
+    val eiz    : (arch, Id.t, uint32) reg
+    val dr0    : (arch, Id.t, uint32) reg
+    val dr1    : (arch, Id.t, uint32) reg
+    val dr2    : (arch, Id.t, uint32) reg
+    val dr3    : (arch, Id.t, uint32) reg
+    val dr4    : (arch, Id.t, uint32) reg
+    val dr5    : (arch, Id.t, uint32) reg
+    val dr6    : (arch, Id.t, uint32) reg
+    val dr7    : (arch, Id.t, uint32) reg
+    val cr0    : (arch, Id.t, uint32) reg
+    val cr1    : (arch, Id.t, uint32) reg
+    val cr2    : (arch, Id.t, uint32) reg
+    val cr3    : (arch, Id.t, uint32) reg
+    val cr4    : (arch, Id.t, uint32) reg
+
+    val read   : (family, word) engine -> (arch, Id.t, 'w) reg -> 'w
+    val write  : (family, word) engine -> (arch, Id.t, 'w) reg -> 'w -> unit
+  end
+
+  val create : ?mode : arch Mode.t -> unit -> (family, word) engine
+end
 
 module X86_64  : sig
   type arch   = Arch.x86_64
@@ -230,6 +298,14 @@ end
 module Memory : sig
   module Permission : sig
     type t
+
+    val read    : t
+    val write   : t
+    val execute : t
+    val all     : t
+    val none    : t
+
+    val (&) : t -> t -> t
   end
 
   val read_word : (module S with type family = 'f

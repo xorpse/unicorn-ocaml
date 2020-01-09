@@ -34,7 +34,15 @@ external stop_ffi : handle -> unit = "ml_unicorn_stop"
 
 module Memory = struct
   module Permission = struct
-    type t = private int32
+    type t = int
+
+    let read = (Uc_const.Prot.read :> int)
+    let write = (Uc_const.Prot.write :> int)
+    let execute = (Uc_const.Prot.exec :> int)
+    let all = (Uc_const.Prot.all :> int)
+    let none = (Uc_const.Prot.none :> int)
+
+    let (&) = (lor)
   end
 
   external read_uint8_ffi : handle -> uint8 -> uint8 = "ml_unicorn_read_uint8"
@@ -96,7 +104,7 @@ module Memory = struct
     in
     write_bytes_ffi h a buf
 
-  external map_ffi : handle -> uint64 -> int -> int32 -> unit = "ml_unicorn_map"
+  external map_ffi : handle -> uint64 -> int -> int -> unit = "ml_unicorn_map"
 
   let map (type f) (type w)
       (e : (f, w) engine) (a : w) (n : int) (p : Permission.t) : unit =
@@ -107,7 +115,7 @@ module Memory = struct
       | Size.W32 -> Uint32.to_uint64 a
       | Size.W64 -> a
     in
-    map_ffi h a n (p :> int32)
+    map_ffi h a n (p :> int)
 
   let map_bytes (type f) (type w)
       (e : (f, w) engine) (a : w) (buf : bytes) (p : Permission.t) : unit =
@@ -126,7 +134,7 @@ module Memory = struct
     in
     unmap_ffi h a n
 
-  external protect_ffi : handle -> uint64 -> int -> int32 -> unit = "ml_unicorn_protect"
+  external protect_ffi : handle -> uint64 -> int -> int -> unit = "ml_unicorn_protect"
 
   let protect (type f) (type w)
       (e : (f, w) engine) (a : w) (n : int) (p : Permission.t) : unit =
@@ -137,7 +145,7 @@ module Memory = struct
       | Size.W32 -> Uint32.to_uint64 a
       | Size.W64 -> a
     in
-    protect_ffi h a n (p :> int32)
+    protect_ffi h a n (p :> int)
 end
 
 module Hook = struct
@@ -192,10 +200,10 @@ module Hook = struct
   let out f = M_HOOK_X86_OUT f
 *)
 
-  external hook_add_code_ffi : handle -> Const.Hook.t -> (handle -> int64 -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_intr_ffi : handle -> Const.Hook.t -> (handle -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_mem_ffi : handle -> Memory.Access.Valid.t -> (handle -> Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_memev_ffi : handle -> Memory.Access.Invalid.t -> (handle -> Memory.Access.Invalid.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_code_ffi : handle -> Const.Hook.t -> (int64 -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_intr_ffi : handle -> Const.Hook.t -> (int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_mem_ffi : handle -> Memory.Access.Valid.t -> (Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_memev_ffi : handle -> Memory.Access.Invalid.t -> (Memory.Access.Invalid.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
 
   (*
   external hook_add_insn_in_ffi : handle -> Const.Hook.t -> (handle -> int32 -> int -> 'v -> int32 * 'v) -> 'v -> X86.Const.Insn.t -> int64 = "ml_unicorn_hook_add_insn"
@@ -207,11 +215,8 @@ module Hook = struct
   type ('f, 'w) handle = ('f, 'w) engine * int64
 
   let add (type f) (type w) (type v) (e : (f, w) engine) (cb : (f, w, v) callback) (init : v) : (f, w) handle =
-    let family = Types.family e in
-    let endian = Types.endian e in
-    let word_size = Types.word_size e in
     let h = Types.handle e in
-    let mk_f f h' = f (engine ~family ~endian ~word_size h') in
+    let mk_f f = f e in
     let h = match cb with
       | M_HOOK_CODE f -> hook_add_code_ffi h Const.Hook.code (mk_f f) init
       | M_HOOK_INTR f -> hook_add_intr_ffi h Const.Hook.intr (mk_f f) init
