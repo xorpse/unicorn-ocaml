@@ -454,39 +454,39 @@ module Mips64 : sig
     val r29 : (arch, Id.t, uint64) reg
     val r30 : (arch, Id.t, uint64) reg
 
-	  val zero : (arch, Id.t, uint64) reg
-	  val at : (arch, Id.t, uint64) reg
-	  val v0 : (arch, Id.t, uint64) reg
-	  val v1 : (arch, Id.t, uint64) reg
-	  val a0 : (arch, Id.t, uint64) reg
-	  val a1 : (arch, Id.t, uint64) reg
-	  val a2 : (arch, Id.t, uint64) reg
-	  val a3 : (arch, Id.t, uint64) reg
-	  val t0 : (arch, Id.t, uint64) reg
-	  val t1 : (arch, Id.t, uint64) reg
-	  val t2 : (arch, Id.t, uint64) reg
-	  val t3 : (arch, Id.t, uint64) reg
-	  val t4 : (arch, Id.t, uint64) reg
-	  val t5 : (arch, Id.t, uint64) reg
-	  val t6 : (arch, Id.t, uint64) reg
-	  val t7 : (arch, Id.t, uint64) reg
-	  val s0 : (arch, Id.t, uint64) reg
-	  val s1 : (arch, Id.t, uint64) reg
-	  val s2 : (arch, Id.t, uint64) reg
-	  val s3 : (arch, Id.t, uint64) reg
-	  val s4 : (arch, Id.t, uint64) reg
-	  val s5 : (arch, Id.t, uint64) reg
-	  val s6 : (arch, Id.t, uint64) reg
-	  val s7 : (arch, Id.t, uint64) reg
-	  val t8 : (arch, Id.t, uint64) reg
-	  val t9 : (arch, Id.t, uint64) reg
-	  val k0 : (arch, Id.t, uint64) reg
-	  val k1 : (arch, Id.t, uint64) reg
-	  val gp : (arch, Id.t, uint64) reg
-	  val sp : (arch, Id.t, uint64) reg
+    val zero : (arch, Id.t, uint64) reg
+    val at : (arch, Id.t, uint64) reg
+    val v0 : (arch, Id.t, uint64) reg
+    val v1 : (arch, Id.t, uint64) reg
+    val a0 : (arch, Id.t, uint64) reg
+    val a1 : (arch, Id.t, uint64) reg
+    val a2 : (arch, Id.t, uint64) reg
+    val a3 : (arch, Id.t, uint64) reg
+    val t0 : (arch, Id.t, uint64) reg
+    val t1 : (arch, Id.t, uint64) reg
+    val t2 : (arch, Id.t, uint64) reg
+    val t3 : (arch, Id.t, uint64) reg
+    val t4 : (arch, Id.t, uint64) reg
+    val t5 : (arch, Id.t, uint64) reg
+    val t6 : (arch, Id.t, uint64) reg
+    val t7 : (arch, Id.t, uint64) reg
+    val s0 : (arch, Id.t, uint64) reg
+    val s1 : (arch, Id.t, uint64) reg
+    val s2 : (arch, Id.t, uint64) reg
+    val s3 : (arch, Id.t, uint64) reg
+    val s4 : (arch, Id.t, uint64) reg
+    val s5 : (arch, Id.t, uint64) reg
+    val s6 : (arch, Id.t, uint64) reg
+    val s7 : (arch, Id.t, uint64) reg
+    val t8 : (arch, Id.t, uint64) reg
+    val t9 : (arch, Id.t, uint64) reg
+    val k0 : (arch, Id.t, uint64) reg
+    val k1 : (arch, Id.t, uint64) reg
+    val gp : (arch, Id.t, uint64) reg
+    val sp : (arch, Id.t, uint64) reg
     val fp : (arch, Id.t, uint64) reg
     val s8 : (arch, Id.t, uint64) reg
-	  val ra : (arch, Id.t, uint64) reg
+    val ra : (arch, Id.t, uint64) reg
 
     val pc : (arch, Id.t, uint64) reg
 
@@ -538,39 +538,39 @@ module Mips : sig
     val r29 : (arch, Id.t, uint32) reg
     val r30 : (arch, Id.t, uint32) reg
 
-	  val zero : (arch, Id.t, uint32) reg
-	  val at : (arch, Id.t, uint32) reg
-	  val v0 : (arch, Id.t, uint32) reg
-	  val v1 : (arch, Id.t, uint32) reg
-	  val a0 : (arch, Id.t, uint32) reg
-	  val a1 : (arch, Id.t, uint32) reg
-	  val a2 : (arch, Id.t, uint32) reg
-	  val a3 : (arch, Id.t, uint32) reg
-	  val t0 : (arch, Id.t, uint32) reg
-	  val t1 : (arch, Id.t, uint32) reg
-	  val t2 : (arch, Id.t, uint32) reg
-	  val t3 : (arch, Id.t, uint32) reg
-	  val t4 : (arch, Id.t, uint32) reg
-	  val t5 : (arch, Id.t, uint32) reg
-	  val t6 : (arch, Id.t, uint32) reg
-	  val t7 : (arch, Id.t, uint32) reg
-	  val s0 : (arch, Id.t, uint32) reg
-	  val s1 : (arch, Id.t, uint32) reg
-	  val s2 : (arch, Id.t, uint32) reg
-	  val s3 : (arch, Id.t, uint32) reg
-	  val s4 : (arch, Id.t, uint32) reg
-	  val s5 : (arch, Id.t, uint32) reg
-	  val s6 : (arch, Id.t, uint32) reg
-	  val s7 : (arch, Id.t, uint32) reg
-	  val t8 : (arch, Id.t, uint32) reg
-	  val t9 : (arch, Id.t, uint32) reg
-	  val k0 : (arch, Id.t, uint32) reg
-	  val k1 : (arch, Id.t, uint32) reg
-	  val gp : (arch, Id.t, uint32) reg
-	  val sp : (arch, Id.t, uint32) reg
+    val zero : (arch, Id.t, uint32) reg
+    val at : (arch, Id.t, uint32) reg
+    val v0 : (arch, Id.t, uint32) reg
+    val v1 : (arch, Id.t, uint32) reg
+    val a0 : (arch, Id.t, uint32) reg
+    val a1 : (arch, Id.t, uint32) reg
+    val a2 : (arch, Id.t, uint32) reg
+    val a3 : (arch, Id.t, uint32) reg
+    val t0 : (arch, Id.t, uint32) reg
+    val t1 : (arch, Id.t, uint32) reg
+    val t2 : (arch, Id.t, uint32) reg
+    val t3 : (arch, Id.t, uint32) reg
+    val t4 : (arch, Id.t, uint32) reg
+    val t5 : (arch, Id.t, uint32) reg
+    val t6 : (arch, Id.t, uint32) reg
+    val t7 : (arch, Id.t, uint32) reg
+    val s0 : (arch, Id.t, uint32) reg
+    val s1 : (arch, Id.t, uint32) reg
+    val s2 : (arch, Id.t, uint32) reg
+    val s3 : (arch, Id.t, uint32) reg
+    val s4 : (arch, Id.t, uint32) reg
+    val s5 : (arch, Id.t, uint32) reg
+    val s6 : (arch, Id.t, uint32) reg
+    val s7 : (arch, Id.t, uint32) reg
+    val t8 : (arch, Id.t, uint32) reg
+    val t9 : (arch, Id.t, uint32) reg
+    val k0 : (arch, Id.t, uint32) reg
+    val k1 : (arch, Id.t, uint32) reg
+    val gp : (arch, Id.t, uint32) reg
+    val sp : (arch, Id.t, uint32) reg
     val fp : (arch, Id.t, uint32) reg
     val s8 : (arch, Id.t, uint32) reg
-	  val ra : (arch, Id.t, uint32) reg
+    val ra : (arch, Id.t, uint32) reg
 
     val pc : (arch, Id.t, uint32) reg
 
