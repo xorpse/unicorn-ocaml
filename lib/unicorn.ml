@@ -6,7 +6,7 @@ module Aarch64 = Aarch64
 module M68k    = M68k
 module Mips64  = Mips.M64
 module Mips    = Mips.M32
-module Sparc64 = Sparc.M32
+module Sparc64 = Sparc.M64
 module Sparc   = Sparc.M32
 module X86     = X86
 module X86_64  = X86_64
@@ -182,15 +182,21 @@ module Hook = struct
                | Stop of 'v
 
   type ('f, 'w, 'v) callback =
+    | M_HOOK_BLOCK   : (('f, 'w) engine -> int64 -> int32 -> 'v -> 'v) -> ('f, 'w, 'v) callback
     | M_HOOK_CODE    : (('f, 'w) engine -> int64 -> int32 -> 'v -> 'v) -> ('f, 'w, 'v) callback
     | M_HOOK_INTR    : (('f, 'w) engine -> int32 -> 'v -> 'v) -> ('f, 'w, 'v) callback
     | M_HOOK_MEM     : (('f, 'w) engine -> Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) * Memory.Access.Valid.t -> ('f, 'w, 'v) callback
     | M_HOOK_MEMEV   : (('f, 'w) engine -> Memory.Access.Valid.t -> int64 -> int -> int64 -> 'v -> 'v cont) * Memory.Access.Invalid.t -> ('f, 'w, 'v) callback
+
 (*
-    | M_HOOK_X86_IN  : ((Family.x86, 'w) engine -> int32 -> int -> 'v -> int32 * 'v) -> (Family.x86, 'w, 'v) callback
-    | M_HOOK_X86_OUT : ((Family.x86, 'w) engine -> int32 -> int -> int32 -> 'v -> 'v) -> (Family.x86, 'w, 'v) callback
+    | M_HOOK_INSN_INVALID : ...
+    | M_HOOK_INSN         : (([< Family.arm | Family.m68k | Family.mips | Family.sparc ] as 'f, 'w) engine -> 'v -> 'v) *  -> ('f, 'w, 'v) callback
+    | M_HOOK_X86_SYSCALL  : ((Family.x86, 'w) engine -> 'v -> 'v) -> (Family.x86, 'w, 'v) callback
+    | M_HOOK_X86_IN       : ((Family.x86, 'w) engine -> int32 -> int -> 'v -> int32 * 'v) -> (Family.x86, 'w, 'v) callback
+    | M_HOOK_X86_OUT      : ((Family.x86, 'w) engine -> int32 -> int -> int32 -> 'v -> 'v) -> (Family.x86, 'w, 'v) callback
  *)
 
+  let block f = M_HOOK_BLOCK f
   let code f = M_HOOK_CODE f
   let intr f = M_HOOK_INTR f
   let mem f t = M_HOOK_MEM (f, t)
@@ -200,10 +206,10 @@ module Hook = struct
   let out f = M_HOOK_X86_OUT f
 *)
 
-  external hook_add_code_ffi : handle -> Const.Hook.t -> (int64 -> int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_intr_ffi : handle -> Const.Hook.t -> (int32 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_mem_ffi : handle -> Memory.Access.Valid.t -> (Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> int64 = "ml_unicorn_hook_add"
-  external hook_add_memev_ffi : handle -> Memory.Access.Invalid.t -> (Memory.Access.Invalid.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> int64 = "ml_unicorn_hook_add"
+  external hook_add_code_ffi : handle -> Const.Hook.t -> (int64 -> int32 -> 'v -> 'v) -> 'v -> uint64 -> uint64 -> int64 = "ml_unicorn_hook_add_bytecode" "ml_unicorn_hook_add"
+  external hook_add_intr_ffi : handle -> Const.Hook.t -> (int32 -> 'v -> 'v) -> 'v -> uint64 -> uint64 ->  int64 = "ml_unicorn_hook_add_bytecode" "ml_unicorn_hook_add"
+  external hook_add_mem_ffi : handle -> Memory.Access.Valid.t -> (Memory.Access.Valid.t -> int64 -> int -> int32 -> int64 -> 'v -> 'v) -> 'v -> uint64 -> uint64 -> int64 = "ml_unicorn_hook_add_bytecode" "ml_unicorn_hook_add"
+  external hook_add_memev_ffi : handle -> Memory.Access.Invalid.t -> (Memory.Access.Invalid.t -> int64 -> int -> int64 -> 'v -> 'v cont) -> 'v -> uint64 -> uint64 -> int64 = "ml_unicorn_hook_add_bytecode" "ml_unicorn_hook_add"
 
   (*
   external hook_add_insn_in_ffi : handle -> Const.Hook.t -> (handle -> int32 -> int -> 'v -> int32 * 'v) -> 'v -> X86.Const.Insn.t -> int64 = "ml_unicorn_hook_add_insn"
@@ -214,14 +220,23 @@ module Hook = struct
 
   type ('f, 'w) handle = ('f, 'w) engine * int64
 
-  let add (type f) (type w) (type v) (e : (f, w) engine) (cb : (f, w, v) callback) (init : v) : (f, w) handle =
+  let add (type f) (type w) (type v) ?(saddr : w option) ?(eaddr : w option) (e : (f, w) engine) (cb : (f, w, v) callback) (init : v) : (f, w) handle =
+    let map_or d f v = match v with None -> d | Some v' -> f v' in
+    let mmin f v = map_or Uint64.zero f v and mmax f v = map_or Uint64.max_int f v in
     let h = Types.handle e in
+    let saddr, eaddr = match Types.word_size e with
+      | Size.W8 -> Uint8.(mmin to_uint64 saddr, mmax to_uint64 eaddr)
+      | Size.W16 -> Uint16.(mmin to_uint64 saddr, mmax to_uint64 eaddr)
+      | Size.W32 -> Uint32.(mmin to_uint64 saddr, mmax to_uint64 eaddr)
+      | Size.W64 -> Uint64.(mmin to_uint64 saddr, mmax to_uint64 eaddr)
+    in
     let mk_f f = f e in
     let h = match cb with
-      | M_HOOK_CODE f -> hook_add_code_ffi h Const.Hook.code (mk_f f) init
-      | M_HOOK_INTR f -> hook_add_intr_ffi h Const.Hook.intr (mk_f f) init
-      | M_HOOK_MEM (f, t) -> hook_add_mem_ffi h t (mk_f f) init
-      | M_HOOK_MEMEV (f, t) -> hook_add_memev_ffi h t (mk_f f) init
+      | M_HOOK_BLOCK f -> hook_add_code_ffi h Const.Hook.block (mk_f f) init saddr eaddr
+      | M_HOOK_CODE f -> hook_add_code_ffi h Const.Hook.code (mk_f f) init saddr eaddr
+      | M_HOOK_INTR f -> hook_add_intr_ffi h Const.Hook.intr (mk_f f) init saddr eaddr
+      | M_HOOK_MEM (f, t) -> hook_add_mem_ffi h t (mk_f f) init saddr eaddr
+      | M_HOOK_MEMEV (f, t) -> hook_add_memev_ffi h t (mk_f f) init saddr eaddr
                                  (*
       | M_HOOK_X86_IN f -> hook_add_insn_in_ffi eh Const.Hook.insn (mk_f f) init X86.Const.Insn.in_
       | M_HOOK_X86_OUT f -> hook_add_insn_out_ffi eh Const.Hook.insn (mk_f f) init X86.Const.Insn.out

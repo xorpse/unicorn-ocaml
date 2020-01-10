@@ -212,15 +212,18 @@ static void ml_unicorn_hook_hndl_code(uc_engine *_uc, uint64_t address, uint32_t
   CAMLreturn0;
 }
 
-CAMLprim value ml_unicorn_hook_add(value engine, value type, value hook, value init) {
+CAMLprim value ml_unicorn_hook_add(value engine, value type, value hook, value init, value saddr, value eaddr) {
   // uc_hook_add gives handle; clean-up, we call uc_hook_del
   // therefore we need to store the callbacks within the handle
   // itself
-  CAMLparam4(engine, type, hook, init);
+  CAMLparam5(engine, type, hook, init, saddr);
+  CAMLxparam1(eaddr);
 
   uc_err err = UC_ERR_OK;
   uc_hook hh = 0; // size_t
   uc_hook_type ht = Int_val(type);
+
+  uint64_t sa = Uint64_val(saddr), ea = Uint64_val(eaddr);
 
   HookCB* ud = caml_stat_alloc(sizeof(HookCB));
   ud->f = hook;
@@ -228,31 +231,16 @@ CAMLprim value ml_unicorn_hook_add(value engine, value type, value hook, value i
   ud->v = init;
   caml_register_global_root(&(ud->v));
 
-  switch (ht) {
-  case UC_HOOK_INTR:
-    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, &ml_unicorn_hook_hndl_intr, (void *)ud, 0, 0);
-    break;
-  case UC_HOOK_CODE:
-  case UC_HOOK_BLOCK:
-    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, &ml_unicorn_hook_hndl_code, (void *)ud, (uint64_t)-1, 0);
-    break;
-  case UC_HOOK_MEM_READ:
-  case UC_HOOK_MEM_WRITE:
-  case UC_HOOK_MEM_FETCH:
-  case UC_HOOK_MEM_READ_AFTER:
-    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, ml_unicorn_hook_hndl_mem, (void *)ud, 0, 0);
-    break;
-  case UC_HOOK_MEM_READ_UNMAPPED:
-  case UC_HOOK_MEM_WRITE_UNMAPPED:
-  case UC_HOOK_MEM_FETCH_UNMAPPED:
-  case UC_HOOK_MEM_READ_PROT:
-  case UC_HOOK_MEM_WRITE_PROT:
-  case UC_HOOK_MEM_FETCH_PROT:
-    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, ml_unicorn_hook_hndl_memev, (void *)ud, 0, 0);
-    break;
-  default:
+  if (ht & UC_HOOK_INTR) {
+    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, &ml_unicorn_hook_hndl_intr, (void *)ud, sa, ea);
+  } else if (ht & (UC_HOOK_CODE | UC_HOOK_BLOCK)) {
+    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, &ml_unicorn_hook_hndl_code, (void *)ud, sa, ea);
+  } else if (ht & UC_HOOK_MEM_VALID) {
+    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, ml_unicorn_hook_hndl_mem, (void *)ud, sa, ea);
+  } else if (ht & UC_HOOK_MEM_INVALID) {
+    err = uc_hook_add(Unicorn_handle_val(engine), &hh, ht, ml_unicorn_hook_hndl_memev, (void *)ud, sa, ea);
+  } else {
     err = UC_ERR_HOOK;
-    break;
   }
 
   if (err != UC_ERR_OK) {
@@ -261,6 +249,10 @@ CAMLprim value ml_unicorn_hook_add(value engine, value type, value hook, value i
   }
 
   CAMLreturn(caml_copy_int64(hh));
+}
+
+CAMLprim value ml_unicorn_hook_add_bytecode(value *argv, int _argc) {
+  return ml_unicorn_hook_add(argv[0], argv[1], argv[2], argv[3], argv[4], argv[5]);
 }
 
 CAMLprim value ml_unicorn_hook_add_insn(value engine, value type, value hook, value init, value insn) {
